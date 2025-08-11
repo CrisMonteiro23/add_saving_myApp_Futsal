@@ -139,47 +139,44 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minWidth: MediaQuery.of(context).size.width),
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: DataTable(
-            columnSpacing: 16,
-            dataRowHeight: 50,
-            headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
-            columns: const [
-              DataColumn(label: Text('Jugador', style: TextStyle(fontWeight: FontWeight.bold))),
-              DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-              DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-              DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            ],
-            rows: [
-              ...statsConDatos.map((entry) {
-                final jugadorNombre = idToNombre[entry.key] ?? 'Desconocido';
-                final playerStat = entry.value;
-                final favor = playerStat['favor']!;
-                final contra = playerStat['contra']!;
-                final balance = favor - contra;
-                return DataRow(
-                  cells: [
-                    DataCell(Text(jugadorNombre)),
-                    DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
-                    DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
-                    DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                  ],
-                );
-              }).toList(),
-              DataRow(
-                color: MaterialStateProperty.all(Colors.blue.shade50),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: DataTable(
+          columnSpacing: 16,
+          dataRowHeight: 50,
+          headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
+          columns: const [
+            DataColumn(label: Text('Jugador', style: TextStyle(fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+            DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+            DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+          ],
+          rows: [
+            ...statsConDatos.map((entry) {
+              final jugadorNombre = idToNombre[entry.key] ?? 'Desconocido';
+              final playerStat = entry.value;
+              final favor = playerStat['favor']!;
+              final contra = playerStat['contra']!;
+              final balance = favor - contra;
+              return DataRow(
                 cells: [
-                  const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                  DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
-                  DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
-                  DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
+                  DataCell(Text(jugadorNombre)),
+                  DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
+                  DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
+                  DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
                 ],
-              ),
-            ],
-          ),
+              );
+            }).toList(),
+            DataRow(
+              color: MaterialStateProperty.all(Colors.blue.shade50),
+              cells: [
+                const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
+                DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
+                DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -192,7 +189,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
     // Total de situaciones por categoría para el cálculo de porcentajes
     final int totalAFavor = situacionesAFavor.length;
-    final int totalEnContra = situacionesEnContra.length;
+    final int totalEn Contra = situacionesEnContra.length;
 
     return SingleChildScrollView(
       child: Column(
@@ -390,7 +387,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                   ),
                 ],
               ),
-            ),
+            ],
           ),
         ),
       );
