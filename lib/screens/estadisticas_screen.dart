@@ -1,4 +1,4 @@
-// lib/screens/estadisticas_screen.dart
+// lib/screens/estadisticas_screen.dart// lib/screens/estadisticas_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mi_app_futsal/data/app_data.dart';
@@ -145,6 +145,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       totalContraJugadores += playerStat['contra']!;
     }
     final int totalGeneralJugadores = totalFavorJugadores + totalContraJugadores;
+    final int totalBalanceJugadores = totalFavorJugadores - totalContraJugadores;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -158,6 +159,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
             DataColumn(label: Text('Jugador', style: TextStyle(fontWeight: FontWeight.bold))),
             DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
             DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+            DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
             DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
           ],
           rows: [
@@ -167,21 +169,25 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
               final favor = playerStat['favor']!;
               final contra = playerStat['contra']!;
               final total = favor + contra;
+              final balance = favor - contra;
               return DataRow(
                 cells: [
                   DataCell(Text(jugadorNombre)),
                   DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
                   DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
+                  DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
                   DataCell(Text(total.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold))),
                 ],
               );
             }).toList(),
+            // Fila de totales generales que resume todas las situaciones
             DataRow(
               color: MaterialStateProperty.all(Colors.blue.shade50),
               cells: [
                 const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
                 DataCell(Text(totalFavorJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
                 DataCell(Text(totalContraJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
+                DataCell(Text(totalBalanceJugadores.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalanceJugadores >= 0 ? Colors.green : Colors.red))),
                 DataCell(Text(totalGeneralJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueAccent))),
               ],
             ),
@@ -408,7 +414,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                           barTouchData: BarTouchData(
                             touchTooltipData: BarTouchTooltipData(
                               getTooltipColor: (group) => Colors.blueGrey,
-                              // CORRECCIÓN: Se agrega el parámetro rodIndex para que coincida con la firma esperada
                               getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                 final jugadorNombre = idToNombre[playerStatsConDatos[group.x.toInt()].key] ?? '?';
                                 final playerStat = playerStatsConDatos[group.x.toInt()].value;
