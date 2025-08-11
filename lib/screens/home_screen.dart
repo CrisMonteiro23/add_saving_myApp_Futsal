@@ -77,6 +77,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  // Modificación: Función para reiniciar solo los pasos de la situación
+  void _resetSituationForm() {
+    setState(() {
+      _currentStep = AppStep.selectPlayers;
+      _esAFavor = null;
+      _selectedTipoLlegada = null;
+    });
+  }
+
+
+  // Modificación: Cambiar la llamada a _resetForm() por _resetSituationForm()
   void _addSituationAndReset() {
     if (_esAFavor == null || _selectedTipoLlegada == null || _selectedPlayers.length != 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final appData = Provider.of<AppData>(context, listen: false);
-    
+
     // ✅ NUEVO: Si no hay partido actual, pedir crear uno
     if (appData.partidoActual == null) {
       _showCrearPartidoRapidoDialog();
@@ -99,7 +110,8 @@ class _HomeScreenState extends State<HomeScreen> {
       const SnackBar(content: Text('Situación registrada con éxito.')),
     );
 
-    _resetForm();
+    // ✅ MODIFICACIÓN: Resetear solo el formulario de la situación, manteniendo los jugadores
+    _resetSituationForm();
   }
 
   // ✅ NUEVO: Diálogo para crear partido rápido
@@ -122,18 +134,19 @@ class _HomeScreenState extends State<HomeScreen> {
               // Crear partido con nombres por defecto
               final appData = Provider.of<AppData>(context, listen: false);
               appData.crearNuevoPartido('Mi Equipo', 'Rival');
-              
+
               // Registrar la situación después de crear el partido
               appData.addSituacion(_esAFavor!, _selectedTipoLlegada!, _selectedPlayers);
-              
+
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Partido creado y situación registrada'),
                   backgroundColor: Colors.green,
                 ),
               );
-              
-              _resetForm();
+
+              // ✅ MODIFICACIÓN: Resetear solo el formulario de la situación, manteniendo los jugadores
+              _resetSituationForm();
             },
             child: const Text('Crear Partido'),
           ),
@@ -326,13 +339,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
 
                 // Contenido basado en el paso actual
-                Expanded(
-                  child: _currentStep == AppStep.selectPlayers
-                      ? _buildPlayerSelectionGrid(appData.jugadores)
-                      : _currentStep == AppStep.selectType
-                          ? _buildTypeSelectionButtons()
-                          : _buildSituationTypeSelection(),
-                ),
+                // ✅ MODIFICACIÓN: Quitar el Expanded para evitar el scroll en la selección de jugadores
+                // Usar un SizedBox para controlar el tamaño si es necesario, pero el Wrap widget es mejor.
+                // En este caso, simplemente se elimina el Expanded.
+                _currentStep == AppStep.selectPlayers
+                    ? _buildPlayerSelectionGrid(appData.jugadores)
+                    : _currentStep == AppStep.selectType
+                        ? _buildTypeSelectionButtons()
+                        : Expanded(child: _buildSituationTypeSelection()),
 
                 const SizedBox(height: 20),
 
@@ -346,17 +360,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ✅ MODIFICACIÓN: Usar Wrap en lugar de GridView para evitar el scroll
   Widget _buildPlayerSelectionGrid(List<Jugador> jugadores) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
-        childAspectRatio: 2.0,
-      ),
-      itemCount: jugadores.length,
-      itemBuilder: (context, index) {
-        final jugador = jugadores[index];
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      alignment: WrapAlignment.center,
+      children: jugadores.map((jugador) {
         final isSelected = _selectedPlayers.contains(jugador);
         return GestureDetector(
           onTap: () => _togglePlayerSelection(jugador),
@@ -370,7 +380,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 2,
               ),
             ),
-            child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
               child: Text(
                 jugador.nombre,
                 textAlign: TextAlign.center,
@@ -383,7 +394,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
         );
-      },
+      }).toList(),
     );
   }
 
