@@ -1,13 +1,12 @@
 // lib/screens/estadisticas_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:mi_app_futsal/data/app_data.dart';
+import '../data/app_data.dart';
 import 'package:mi_app_futsal/models/jugador.dart';
 import 'package:mi_app_futsal/models/situacion.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:csv/csv.dart';
 import 'package:flutter/services.dart';
-import 'dart:convert';
 
 class EstadisticasScreen extends StatefulWidget {
   const EstadisticasScreen({super.key});
@@ -59,7 +58,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
             // Calculamos las estadísticas dentro del Consumer para que se actualicen con el filtro
             final Map<String, Map<String, int>> playerStats = _getPlayerStats(situaciones);
-            final Map<String, Map<String, int>> situacionTypeStats = _getSituacionTypeStats(situaciones);
             final List<Situacion> situacionesAFavor = situaciones.where((s) => s.esAFavor).toList();
             final List<Situacion> situacionesEnContra = situaciones.where((s) => !s.esAFavor).toList();
 
@@ -97,6 +95,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     return stats;
   }
 
+  // Función para obtener las estadísticas por tipo de situación
   Map<String, int> _getSituacionTypeStats(List<Situacion> situaciones) {
     final Map<String, int> stats = {};
     for (var situacion in situaciones) {
@@ -104,6 +103,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     }
     return stats;
   }
+
 
   // --- Widgets para Tablas de Estadísticas ---
   Widget _buildPlayerStatsTable(BuildContext context, Map<String, Map<String, int>> stats, List<Jugador> jugadores, List<Situacion> situaciones) {
@@ -187,7 +187,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     // Calculamos las estadísticas por tipo de situación para cada categoría
     final Map<String, int> statsAFavor = _getSituacionTypeStats(situacionesAFavor);
     final Map<String, int> statsEnContra = _getSituacionTypeStats(situacionesEnContra);
-    
+
     // Total de situaciones por categoría para el cálculo de porcentajes
     final int totalAFavor = situacionesAFavor.length;
     final int totalEnContra = situacionesEnContra.length;
@@ -203,7 +203,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
-  Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, Color color) {
+  Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, MaterialColor color) {
     if (stats.isEmpty) {
       return Center(
         child: Padding(
@@ -216,7 +216,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
         ),
       );
     }
-    
+
     final List<MapEntry<String, int>> sortedStats = stats.entries.toList();
     sortedStats.sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
 
@@ -271,6 +271,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
+
   // --- Widgets para Gráficos de Estadísticas ---
   Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, List<Jugador> jugadores, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
     if (playerStats.isEmpty) {
@@ -282,7 +283,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
         ),
       );
     }
-    
+
     final Map<String, String> idToNombre = {for (var j in jugadores) j.id: j.nombre};
     final List<MapEntry<String, Map<String, int>>> playerStatsConDatos = playerStats.entries.where((entry) {
       final playerStat = entry.value;
@@ -296,7 +297,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     final int totalAFavor = situacionesAFavor.length;
     final int totalEnContra = situacionesEnContra.length;
     final List<Color> pieChartColors = Colors.primaries;
-    
+
     // Funciones para generar las secciones de los gráficos circulares
     List<PieChartSectionData> getPieSections(Map<String, int> stats, int total) {
       if (total == 0) return [];
@@ -319,7 +320,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
         );
       }).toList();
     }
-    
+
     Widget _buildPieChartCard(String title, Map<String, int> stats, int total, Color color) {
       if (total == 0) return const SizedBox.shrink();
 
@@ -498,13 +499,13 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 ),
               ),
             ),
-          
+
           if (situacionesAFavor.isNotEmpty || situacionesEnContra.isNotEmpty)
             const SizedBox(height: 20),
 
           if (situacionesAFavor.isNotEmpty)
             _buildPieChartCard('Distribución de Situaciones A Favor', statsAFavor, totalAFavor, Colors.green),
-          
+
           if (situacionesEnContra.isNotEmpty)
             _buildPieChartCard('Distribución de Situaciones En Contra', statsEnContra, totalEnContra, Colors.red),
         ],
@@ -519,7 +520,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     } else {
       situaciones = appData.partidoActual?.situaciones ?? [];
     }
-    
+
     final List<List<dynamic>> rawData = [];
 
     rawData.add([
