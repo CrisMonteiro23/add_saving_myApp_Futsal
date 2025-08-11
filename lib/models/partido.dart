@@ -1,42 +1,37 @@
-// lib/models/partido.dart
-// Este archivo define la estructura de datos para un Partido.
+import 'jugador.dart';
+import 'situacion.dart';
 
 class Partido {
-  String id; // Identificador único del partido
-  DateTime fecha; // Fecha del partido
-  String hora; // Hora del partido (ej: "20:00")
-  String equipoLocalId; // ID del equipo local
-  String equipoLocalNombre; // Nombre del equipo local
-  int golesLocal; // Goles marcados por el equipo local
-  String equipoVisitanteId; // ID del equipo visitante
-  String equipoVisitanteNombre; // Nombre del equipo visitante
-  int golesVisitante; // Goles marcados por el equipo visitante
-  String cancha; // Nombre de la cancha
-  String arbitro; // Nombre del árbitro
-  String estado; // Estado del partido (ej: "Programado", "Jugado", "Aplazado")
+  String id;
+  DateTime fecha;
+  String hora;
+  String equipoLocalId;
+  String equipoLocalNombre;
+  int golesLocal;
+  String equipoVisitanteId;
+  String equipoVisitanteNombre;
+  int golesVisitante;
+  List<Jugador> jugadores;
+  List<Situacion> situaciones;
 
-  // Constructor de la clase Partido.
-  // Todos los campos son obligatorios.
   Partido({
     required this.id,
     required this.fecha,
     required this.hora,
     required this.equipoLocalId,
     required this.equipoLocalNombre,
-    this.golesLocal = 0, // Por defecto 0 goles
+    required this.golesLocal,
     required this.equipoVisitanteId,
     required this.equipoVisitanteNombre,
-    this.golesVisitante = 0, // Por defecto 0 goles
-    required this.cancha,
-    required this.arbitro,
-    this.estado = 'Programado', // Estado inicial por defecto
+    required this.golesVisitante,
+    required this.jugadores,
+    required this.situaciones,
   });
 
-  // Método para convertir un objeto Partido a un formato JSON (Map).
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'fecha': fecha.toIso8601String(), // Convierte DateTime a String ISO 8601
+      'fecha': fecha.toIso8601String(),
       'hora': hora,
       'equipoLocalId': equipoLocalId,
       'equipoLocalNombre': equipoLocalNombre,
@@ -44,27 +39,28 @@ class Partido {
       'equipoVisitanteId': equipoVisitanteId,
       'equipoVisitanteNombre': equipoVisitanteNombre,
       'golesVisitante': golesVisitante,
-      'cancha': cancha,
-      'arbitro': arbitro,
-      'estado': estado,
+      'jugadores': jugadores.map((j) => j.toJson()).toList(),
+      'situaciones': situaciones.map((s) => s.toJson()).toList(),
     };
   }
 
-  // Método de fábrica para crear un objeto Partido desde un formato JSON (Map).
   factory Partido.fromJson(Map<String, dynamic> json) {
     return Partido(
       id: json['id'],
-      fecha: DateTime.parse(json['fecha']), // Convierte String ISO 8601 a DateTime
+      fecha: DateTime.parse(json['fecha']),
       hora: json['hora'],
       equipoLocalId: json['equipoLocalId'],
       equipoLocalNombre: json['equipoLocalNombre'],
-      golesLocal: json['golesLocal'] ?? 0,
+      golesLocal: json['golesLocal'],
       equipoVisitanteId: json['equipoVisitanteId'],
       equipoVisitanteNombre: json['equipoVisitanteNombre'],
-      golesVisitante: json['golesVisitante'] ?? 0,
-      cancha: json['cancha'],
-      arbitro: json['arbitro'],
-      estado: json['estado'] ?? 'Programado',
+      golesVisitante: json['golesVisitante'],
+      jugadores: (json['jugadores'] as List)
+          .map((j) => Jugador.fromJson(j))
+          .toList(),
+      situaciones: (json['situaciones'] as List)
+          .map((s) => Situacion.fromJson(s))
+          .toList(),
     );
   }
 }
