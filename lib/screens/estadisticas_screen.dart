@@ -60,7 +60,8 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
             // Calculamos las estadísticas dentro del Consumer para que se actualicen con el filtro
             final Map<String, Map<String, int>> playerStats = _getPlayerStats(situaciones);
-            final Map<String, Map<String, int>> situacionTypeStats = _getSituacionTypeStats(situaciones);
+            // LÍNEA CORREGIDA: Cambiado el tipo de la variable a Map<String, int>
+            final Map<String, int> situacionTypeStats = _getSituacionTypeStats(situaciones);
             final List<Situacion> situacionesAFavor = situaciones.where((s) => s.esAFavor).toList();
             final List<Situacion> situacionesEnContra = situaciones.where((s) => !s.esAFavor).toList();
 
