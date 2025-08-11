@@ -140,47 +140,56 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     final int totalFavor = situaciones.where((s) => s.esAFavor).length;
     final int totalContra = situaciones.where((s) => !s.esAFavor).length;
     final int totalBalance = totalFavor - totalContra;
+    
+    // Se calcula una altura aproximada para la tabla.
+    final double dataTableHeight = (statsConDatos.length + 1) * 50.0 + 50.0; 
 
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: DataTable(
-          columnSpacing: 16,
-          dataRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
-          columns: const [
-            DataColumn(label: Text('Jugador', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-          ],
-          rows: [
-            ...statsConDatos.map((entry) {
-              final jugadorNombre = idToNombre[entry.key] ?? 'Desconocido';
-              final playerStat = entry.value;
-              final favor = playerStat['favor']!;
-              final contra = playerStat['contra']!;
-              final balance = favor - contra;
-              return DataRow(
-                cells: [
-                  DataCell(Text(jugadorNombre)),
-                  DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
-                  DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
-                  DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                ],
-              );
-            }).toList(),
-            DataRow(
-              color: MaterialStateProperty.all(Colors.blue.shade50),
-              cells: [
-                const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
-                DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
-                DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
+      scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            height: dataTableHeight,
+            child: DataTable(
+              columnSpacing: 16,
+              dataRowHeight: 50,
+              headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
+              columns: const [
+                DataColumn(label: Text('Jugador', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              ],
+              rows: [
+                ...statsConDatos.map((entry) {
+                  final jugadorNombre = idToNombre[entry.key] ?? 'Desconocido';
+                  final playerStat = entry.value;
+                  final favor = playerStat['favor']!;
+                  final contra = playerStat['contra']!;
+                  final balance = favor - contra;
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(jugadorNombre)),
+                      DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
+                      DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
+                      DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
+                    ],
+                  );
+                }).toList(),
+                DataRow(
+                  color: MaterialStateProperty.all(Colors.blue.shade50),
+                  cells: [
+                    const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
+                    DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
+                    DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
+                  ],
+                ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -207,7 +216,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
-  Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, Color color) {
   Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, MaterialColor color) {
     if (stats.isEmpty) {
       return Center(
@@ -274,6 +282,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       ),
     );
   }
+
   // --- Widgets para Gráficos de Estadísticas ---
   Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, List<Jugador> jugadores, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
     if (playerStats.isEmpty) {
