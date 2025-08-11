@@ -1,7 +1,10 @@
+// lib/data/app_data.dart
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:mi_app_futsal/models/jugador.dart';
 import 'package:mi_app_futsal/models/situacion.dart';
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppData extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
@@ -27,11 +30,9 @@ class AppData extends ChangeNotifier {
   final List<Situacion> _situacionesRegistradas = [];
 
   // Getter público para acceder a la lista de jugadores
-  List<Jugador> get jugadores => List.unmodifiable(_jugadoresDisponibles);
+  List<Jugador> get jugadoresDisponibles => List.unmodifiable(_jugadoresDisponibles);
 
   // Getter para uso directo (estadísticas)
-  List<Jugador> get jugadoresDisponibles => _jugadoresDisponibles;
-
   List<Situacion> get situacionesRegistradas => List.unmodifiable(_situacionesRegistradas);
 
   void addJugador(String nombre) {
@@ -52,23 +53,26 @@ class AppData extends ChangeNotifier {
     );
     _situacionesRegistradas.add(situacion);
     notifyListeners();
+    _saveToStorage();
   }
 
   void deleteSituacion(String id) {
     _situacionesRegistradas.removeWhere((s) => s.id == id);
     notifyListeners();
+    _saveToStorage();
   }
 
-  Map<String, Map<String, int>> getPlayerStats() {
+  Map<String, Map<String, int>> getStatsPorJugador() {
     final Map<String, Map<String, int>> stats = {};
-
-    for (var jugador in _jugadoresDisponibles) {
+    for (final jugador in _jugadoresDisponibles) {
       stats[jugador.id] = {'favor': 0, 'contra': 0};
     }
 
-    for (var situacion in _situacionesRegistradas) {
-      for (var jugadorId in situacion.jugadoresEnCanchaIds) {
-        stats.putIfAbsent(jugadorId, () => {'favor': 0, 'contra': 0});
+    for (final situacion in _situacionesRegistradas) {
+      for (final jugadorId in situacion.jugadoresEnCanchaIds) {
+        if (!stats.containsKey(jugadorId)) {
+          stats[jugadorId] = {'favor': 0, 'contra': 0};
+        }
         if (situacion.esAFavor) {
           stats[jugadorId]!['favor'] = stats[jugadorId]!['favor']! + 1;
         } else {
@@ -80,25 +84,17 @@ class AppData extends ChangeNotifier {
     return stats;
   }
 
-  Map<String, Map<String, int>> getSituacionTypeStats() {
+  Map<String, Map<String, int>> getStatsPorTipo() {
     final Map<String, Map<String, int>> stats = {};
-
-    for (var tipo in [
-      'Ataque Posicional', 'INC Portero', 'Transicion Corta',
-      'Transicion Larga', 'ABP', '5x4', '4x5', 'Dobles-Penales'
-    ]) {
-      stats[tipo] = {'favor': 0, 'contra': 0};
-    }
-
-    for (var situacion in _situacionesRegistradas) {
-      stats.putIfAbsent(situacion.tipoLlegada, () => {'favor': 0, 'contra': 0});
+    for (final situacion in _situacionesRegistradas) {
+      final tipo = situacion.tipoLlegada;
+      stats.putIfAbsent(tipo, () => {'favor': 0, 'contra': 0});
       if (situacion.esAFavor) {
-        stats[situacion.tipoLlegada]!['favor'] = stats[situacion.tipoLlegada]!['favor']! + 1;
+        stats[tipo]!['favor'] = stats[tipo]!['favor']! + 1;
       } else {
-        stats[situacion.tipoLlegada]!['contra'] = stats[situacion.tipoLlegada]!['contra']! + 1;
+        stats[tipo]!['contra'] = stats[tipo]!['contra']! + 1;
       }
     }
-
     return stats;
   }
 
@@ -112,5 +108,30 @@ class AppData extends ChangeNotifier {
       'contra': contra,
       'total': total,
     };
+  }
+
+  // --- Persistencia local ---
+  static const String _kKeySituaciones = 'situaciones_guardadas_v1';
+
+  Future<void> _saveToStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lista = _situacionesRegistradas.map((s) => jsonEncode(s.toJson())).toList();
+      await prefs.setStringList(_kKeySituaciones, lista);
+    } catch (e) {
+      // Si falla el guardado, no queremos bloquear la app. Se podría loguear acá.
+    }
+  }
+
+  Future<void> loadFromStorage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lista = prefs.getStringList(_kKeySituaciones) ?? [];
+      _situacionesRegistradas.clear();
+      _situacionesRegistradas.addAll(lista.map((s) => Situacion.fromJson(jsonDecode(s))).toList());
+      notifyListeners();
+    } catch (e) {
+      // Ignorar errores de carga en inicialización.
+    }
   }
 }
