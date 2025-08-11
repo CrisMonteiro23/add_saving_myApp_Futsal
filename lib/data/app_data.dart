@@ -29,11 +29,22 @@ class AppData extends ChangeNotifier {
 
   final List<Situacion> _situacionesRegistradas = [];
 
+  // ✅ NUEVO: Nombre del partido actual
+  String _partidoActual = '';
+
   // Getter público para acceder a la lista de jugadores
   List<Jugador> get jugadoresDisponibles => List.unmodifiable(_jugadoresDisponibles);
 
   // Getter para uso directo (estadísticas)
   List<Situacion> get situacionesRegistradas => List.unmodifiable(_situacionesRegistradas);
+
+  // ✅ NUEVO: Getter/setter partido actual
+  String get partidoActual => _partidoActual;
+  void setPartidoActual(String nombre) {
+    _partidoActual = nombre.trim();
+    notifyListeners();
+    _saveToStorage();
+  }
 
   void addJugador(String nombre) {
     if (nombre.trim().isEmpty) return;
@@ -112,12 +123,14 @@ class AppData extends ChangeNotifier {
 
   // --- Persistencia local ---
   static const String _kKeySituaciones = 'situaciones_guardadas_v1';
+  static const String _kKeyPartido = 'partido_actual_v1';
 
   Future<void> _saveToStorage() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lista = _situacionesRegistradas.map((s) => jsonEncode(s.toJson())).toList();
       await prefs.setStringList(_kKeySituaciones, lista);
+      await prefs.setString(_kKeyPartido, _partidoActual); // ✅ Guardar partido
     } catch (e) {
       // Si falla el guardado, no queremos bloquear la app. Se podría loguear acá.
     }
@@ -129,6 +142,7 @@ class AppData extends ChangeNotifier {
       final lista = prefs.getStringList(_kKeySituaciones) ?? [];
       _situacionesRegistradas.clear();
       _situacionesRegistradas.addAll(lista.map((s) => Situacion.fromJson(jsonDecode(s))).toList());
+      _partidoActual = prefs.getString(_kKeyPartido) ?? ''; // ✅ Cargar partido
       notifyListeners();
     } catch (e) {
       // Ignorar errores de carga en inicialización.
