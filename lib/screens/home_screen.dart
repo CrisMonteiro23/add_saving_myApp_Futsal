@@ -41,6 +41,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _newPlayerController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Cargar datos guardados al iniciar
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AppData>(context, listen: false).loadFromStorage();
+    });
+  }
+
+  @override
   void dispose() {
     _newPlayerController.dispose();
     super.dispose();
@@ -261,13 +270,13 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.green, // Botón verde para "a favor"
-            minimumSize: const Size(200, 50), // Tamaño mínimo del botón ligeramente reducido
-            textStyle: const TextStyle(fontSize: 18), // Tamaño de fuente reducido
+            backgroundColor: Colors.green,
+            minimumSize: const Size(200, 50),
+            textStyle: const TextStyle(fontSize: 18),
           ),
           child: const Text('Llegada a favor'),
         ),
-        const SizedBox(height: 20), // Espacio reducido
+        const SizedBox(height: 20),
         ElevatedButton(
           onPressed: () {
             setState(() {
@@ -276,9 +285,9 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.red, // Botón rojo para "en contra"
-            minimumSize: const Size(200, 50), // Tamaño mínimo del botón ligeramente reducido
-            textStyle: const TextStyle(fontSize: 18), // Tamaño de fuente reducido
+            backgroundColor: Colors.red,
+            minimumSize: const Size(200, 50),
+            textStyle: const TextStyle(fontSize: 18),
           ),
           child: const Text('Llegada en contra'),
         ),
@@ -294,15 +303,15 @@ class _HomeScreenState extends State<HomeScreen> {
         final tipo = _tiposLlegada[index];
         final isSelected = _selectedTipoLlegada == tipo;
         return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4.0), // Margen vertical reducido
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
           color: isSelected ? Colors.blue.shade100 : Colors.white,
           elevation: isSelected ? 6 : 2,
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0), // Padding reducido
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             title: Text(
               tipo,
               style: TextStyle(
-                fontSize: 16, // Tamaño de fuente reducido
+                fontSize: 16,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 color: isSelected ? Colors.blue.shade800 : Colors.black,
               ),
@@ -329,32 +338,31 @@ class _HomeScreenState extends State<HomeScreen> {
                   _currentStep = AppStep.selectType;
                 });
               }
-            : null, // Deshabilitado si no hay 5 jugadores
+            : null,
         child: const Text('Siguiente'),
       );
     } else if (_currentStep == AppStep.selectType) {
       return ElevatedButton(
         onPressed: () {
-          // Si el usuario vuelve atrás desde este paso, puede ir al paso anterior
-          _resetForm(); // Forzamos un reset completo si se vuelve desde aquí
+          _resetForm();
         },
         child: const Text('Volver a Selección de Jugadores'),
       );
-    } else { // AppStep.selectSituation
+    } else {
       return Column(
         children: [
           ElevatedButton(
             onPressed: _selectedTipoLlegada != null
-                ? _addSituationAndReset // Llama a la función que guarda y resetea
-                : null, // Deshabilitado si no se ha seleccionado tipo
+                ? _addSituationAndReset
+                : null,
             child: const Text('Registrar Situación'),
           ),
           const SizedBox(height: 10),
           TextButton(
             onPressed: () {
               setState(() {
-                _currentStep = AppStep.selectType; // Volver al paso anterior
-                _selectedTipoLlegada = null; // Limpiar selección de tipo de llegada
+                _currentStep = AppStep.selectType;
+                _selectedTipoLlegada = null;
               });
             },
             child: const Text('Volver a Tipo de Llegada'),
