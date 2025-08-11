@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mi_app_futsal/data/app_data.dart';
 import 'package:mi_app_futsal/models/jugador.dart';
-import 'package:mi_app_futsal/screens/estadisticas_screen.dart'; // Para navegar a estadísticas
+import 'package:mi_app_futsal/screens/estadisticas_screen.dart';
+import 'package:mi_app_futsal/screens/partidos_screen.dart'; // ✅ NUEVO import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,19 +14,17 @@ class HomeScreen extends StatefulWidget {
 }
 
 enum AppStep {
-  selectPlayers, // Paso 1: Seleccionar jugadores en cancha
-  selectType, // Paso 2: Seleccionar si es a favor o en contra
-  selectSituation, // Paso 3: Seleccionar el tipo de situación
+  selectPlayers,
+  selectType,
+  selectSituation,
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // Lista de jugadores seleccionados para estar en cancha
   final List<Jugador> _selectedPlayers = [];
-  AppStep _currentStep = AppStep.selectPlayers; // Paso actual de la aplicación
-  bool? _esAFavor; // True si es a favor, false si es en contra, null si no seleccionado
-  String? _selectedTipoLlegada; // El tipo de llegada seleccionado
+  AppStep _currentStep = AppStep.selectPlayers;
+  bool? _esAFavor;
+  String? _selectedTipoLlegada;
 
-  // Opciones de tipos de llegada
   final List<String> _tiposLlegada = [
     'Ataque Posicional',
     'INC Portero',
@@ -37,13 +36,11 @@ class _HomeScreenState extends State<HomeScreen> {
     'Dobles-Penales',
   ];
 
-  // Controlador para añadir nuevos jugadores
   final TextEditingController _newPlayerController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Cargar datos guardados al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<AppData>(context, listen: false).loadFromStorage();
     });
@@ -55,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  // Función para manejar la selección/deselección de jugadores
   void _togglePlayerSelection(Jugador jugador) {
     setState(() {
       if (_selectedPlayers.contains(jugador)) {
@@ -72,7 +68,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Función para reiniciar el estado del formulario
   void _resetForm() {
     setState(() {
       _selectedPlayers.clear();
@@ -82,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Función para añadir una situación y reiniciar
   void _addSituationAndReset() {
     if (_esAFavor == null || _selectedTipoLlegada == null || _selectedPlayers.length != 5) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -91,26 +85,97 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    Provider.of<AppData>(context, listen: false).addSituacion(
-      _esAFavor!,
-      _selectedTipoLlegada!,
-      _selectedPlayers,
-    );
+    final appData = Provider.of<AppData>(context, listen: false);
+    
+    // ✅ NUEVO: Si no hay partido actual, pedir crear uno
+    if (appData.partidoActual == null) {
+      _showCrearPartidoRapidoDialog();
+      return;
+    }
+
+    appData.addSituacion(_esAFavor!, _selectedTipoLlegada!, _selectedPlayers);
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Situación registrada con éxito.')),
     );
 
-    _resetForm(); // Reinicia el formulario inmediatamente
+    _resetForm();
+  }
+
+  // ✅ NUEVO: Diálogo para crear partido rápido
+  void _showCrearPartidoRapidoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('No hay partido activo'),
+        content: const Text(
+          'Necesitas crear un partido para registrar situaciones.\n¿Quieres crear uno ahora?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Crear partido con nombres por defecto
+              final appData = Provider.of<AppData>(context, listen: false);
+              appData.crearNuevoPartido('Mi Equipo', 'Rival');
+              
+              // Registrar la situación después de crear el partido
+              appData.addSituacion(_esAFavor!, _selectedTipoLlegada!, _selectedPlayers);
+              
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Partido creado y situación registrada'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+              
+              _resetForm();
+            },
+            child: const Text('Crear Partido'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Consumer para acceder a la lista de jugadores disponibles
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analizador de Futsal'),
+        title: Consumer<AppData>(
+          builder: (context, appData, child) {
+            final partidoActual = appData.partidoActual;
+            if (partidoActual != null) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Analizador de Futsal'),
+                  Text(
+                    '${partidoActual.equipoLocalNombre} vs ${partidoActual.equipoVisitanteNombre}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              );
+            }
+            return const Text('Analizador de Futsal');
+          },
+        ),
         actions: [
+          // ✅ NUEVO: Botón para gestionar partidos
+          IconButton(
+            icon: const Icon(Icons.sports_soccer),
+            tooltip: 'Gestionar Partidos',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const PartidosScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.leaderboard),
             tooltip: 'Ver Estadísticas',
@@ -130,6 +195,71 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
+                // ✅ NUEVO: Información del partido actual
+                if (appData.partidoActual != null)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    color: Colors.green.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.sports_soccer, color: Colors.green.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Partido Actual: ${appData.partidoActual!.equipoLocalNombre} vs ${appData.partidoActual!.equipoVisitanteNombre}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Text('Situaciones registradas: ${appData.situacionesRegistradas.length}'),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                // ✅ NUEVO: Warning si no hay partido
+                if (appData.partidoActual == null)
+                  Card(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    color: Colors.orange.shade50,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning, color: Colors.orange.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'No hay partido activo',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const Text('Se creará automáticamente al registrar la primera situación'),
+                              ],
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PartidosScreen()),
+                              );
+                            },
+                            child: const Text('Crear Partido'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
                 // Sección para añadir nuevos jugadores
                 Card(
                   margin: const EdgeInsets.only(bottom: 20),
@@ -182,6 +312,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
+
                 // Título de la sección actual
                 Text(
                   _currentStep == AppStep.selectPlayers
@@ -215,14 +346,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget para la selección de jugadores
   Widget _buildPlayerSelectionGrid(List<Jugador> jugadores) {
     return GridView.builder(
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4, // Aumentado a 4 columnas para hacer los iconos más chicos
-        crossAxisSpacing: 8, // Espacio reducido
-        mainAxisSpacing: 8, // Espacio reducido
-        childAspectRatio: 2.0, // Reducido para hacer las tarjetas más compactas
+        crossAxisCount: 4,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 2.0,
       ),
       itemCount: jugadores.length,
       itemBuilder: (context, index) {
@@ -234,7 +364,7 @@ class _HomeScreenState extends State<HomeScreen> {
             color: isSelected ? Colors.blueAccent.shade100 : Colors.grey.shade200,
             elevation: isSelected ? 8 : 2,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8), // Bordes ligeramente más pequeños
+              borderRadius: BorderRadius.circular(8),
               side: BorderSide(
                 color: isSelected ? Colors.blueAccent : Colors.transparent,
                 width: 2,
@@ -245,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 jugador.nombre,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 14, // Tamaño de fuente reducido
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: isSelected ? Colors.blueAccent.shade700 : Colors.black87,
                 ),
@@ -257,7 +387,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget para la selección de tipo (favor/contra)
   Widget _buildTypeSelectionButtons() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -266,7 +395,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () {
             setState(() {
               _esAFavor = true;
-              _currentStep = AppStep.selectSituation; // Avanza al siguiente paso
+              _currentStep = AppStep.selectSituation;
             });
           },
           style: ElevatedButton.styleFrom(
@@ -281,7 +410,7 @@ class _HomeScreenState extends State<HomeScreen> {
           onPressed: () {
             setState(() {
               _esAFavor = false;
-              _currentStep = AppStep.selectSituation; // Avanza al siguiente paso
+              _currentStep = AppStep.selectSituation;
             });
           },
           style: ElevatedButton.styleFrom(
@@ -295,7 +424,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget para la selección del tipo de situación
   Widget _buildSituationTypeSelection() {
     return ListView.builder(
       itemCount: _tiposLlegada.length,
@@ -328,7 +456,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget para los botones de acción (Siguiente / Registrar)
   Widget _buildActionButtons() {
     if (_currentStep == AppStep.selectPlayers) {
       return ElevatedButton(
