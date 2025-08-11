@@ -29,23 +29,27 @@ class AppData extends ChangeNotifier {
 
   final List<Situacion> _situacionesRegistradas = [];
 
-  // ✅ NUEVO: Nombre del partido actual
+  // Nombre del partido actual
   String _partidoActual = '';
 
-  // Getter público para acceder a la lista de jugadores
+  // === GETTERS ===
   List<Jugador> get jugadoresDisponibles => List.unmodifiable(_jugadoresDisponibles);
 
-  // Getter para uso directo (estadísticas)
+  // ✅ Nuevo: getter usado por la UI
+  List<Jugador> get jugadores => jugadoresDisponibles;
+
   List<Situacion> get situacionesRegistradas => List.unmodifiable(_situacionesRegistradas);
 
-  // ✅ NUEVO: Getter/setter partido actual
   String get partidoActual => _partidoActual;
+
+  // === SETTERS ===
   void setPartidoActual(String nombre) {
     _partidoActual = nombre.trim();
     notifyListeners();
     _saveToStorage();
   }
 
+  // === MÉTODOS ===
   void addJugador(String nombre) {
     if (nombre.trim().isEmpty) return;
     if (_jugadoresDisponibles.any((j) => j.nombre.toLowerCase() == nombre.toLowerCase())) return;
@@ -73,6 +77,7 @@ class AppData extends ChangeNotifier {
     _saveToStorage();
   }
 
+  // === ESTADÍSTICAS POR JUGADOR ===
   Map<String, Map<String, int>> getStatsPorJugador() {
     final Map<String, Map<String, int>> stats = {};
     for (final jugador in _jugadoresDisponibles) {
@@ -81,9 +86,7 @@ class AppData extends ChangeNotifier {
 
     for (final situacion in _situacionesRegistradas) {
       for (final jugadorId in situacion.jugadoresEnCanchaIds) {
-        if (!stats.containsKey(jugadorId)) {
-          stats[jugadorId] = {'favor': 0, 'contra': 0};
-        }
+        stats.putIfAbsent(jugadorId, () => {'favor': 0, 'contra': 0});
         if (situacion.esAFavor) {
           stats[jugadorId]!['favor'] = stats[jugadorId]!['favor']! + 1;
         } else {
@@ -95,6 +98,10 @@ class AppData extends ChangeNotifier {
     return stats;
   }
 
+  // ✅ Nuevo: alias para compatibilidad con la UI
+  Map<String, Map<String, int>> getPlayerStats() => getStatsPorJugador();
+
+  // === ESTADÍSTICAS POR TIPO DE LLEGADA ===
   Map<String, Map<String, int>> getStatsPorTipo() {
     final Map<String, Map<String, int>> stats = {};
     for (final situacion in _situacionesRegistradas) {
@@ -109,7 +116,10 @@ class AppData extends ChangeNotifier {
     return stats;
   }
 
-  // ✅ NUEVO: Totales reales (llegadas únicas, no duplicadas por jugador)
+  // ✅ Nuevo: alias para compatibilidad con la UI
+  Map<String, Map<String, int>> getSituacionTypeStats() => getStatsPorTipo();
+
+  // === TOTALES REALES ===
   Map<String, int> getTotalesReales() {
     final int favor = _situacionesRegistradas.where((s) => s.esAFavor).length;
     final int contra = _situacionesRegistradas.where((s) => !s.esAFavor).length;
@@ -121,7 +131,7 @@ class AppData extends ChangeNotifier {
     };
   }
 
-  // --- Persistencia local ---
+  // === PERSISTENCIA LOCAL ===
   static const String _kKeySituaciones = 'situaciones_guardadas_v1';
   static const String _kKeyPartido = 'partido_actual_v1';
 
@@ -130,9 +140,9 @@ class AppData extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final lista = _situacionesRegistradas.map((s) => jsonEncode(s.toJson())).toList();
       await prefs.setStringList(_kKeySituaciones, lista);
-      await prefs.setString(_kKeyPartido, _partidoActual); // ✅ Guardar partido
-    } catch (e) {
-      // Si falla el guardado, no queremos bloquear la app. Se podría loguear acá.
+      await prefs.setString(_kKeyPartido, _partidoActual);
+    } catch (_) {
+      // Ignorar errores de guardado
     }
   }
 
@@ -140,12 +150,13 @@ class AppData extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final lista = prefs.getStringList(_kKeySituaciones) ?? [];
-      _situacionesRegistradas.clear();
-      _situacionesRegistradas.addAll(lista.map((s) => Situacion.fromJson(jsonDecode(s))).toList());
-      _partidoActual = prefs.getString(_kKeyPartido) ?? ''; // ✅ Cargar partido
+      _situacionesRegistradas
+        ..clear()
+        ..addAll(lista.map((s) => Situacion.fromJson(jsonDecode(s))).toList());
+      _partidoActual = prefs.getString(_kKeyPartido) ?? '';
       notifyListeners();
-    } catch (e) {
-      // Ignorar errores de carga en inicialización.
+    } catch (_) {
+      // Ignorar errores de carga
     }
   }
 }
