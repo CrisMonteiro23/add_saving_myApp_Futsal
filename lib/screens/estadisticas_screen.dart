@@ -408,7 +408,8 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                           barTouchData: BarTouchData(
                             touchTooltipData: BarTouchTooltipData(
                               getTooltipColor: (group) => Colors.blueGrey,
-                              getTooltipItem: (group, groupIndex, rod) {
+                              // CORRECCIÓN: Se agrega el parámetro rodIndex para que coincida con la firma esperada
+                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
                                 final jugadorNombre = idToNombre[playerStatsConDatos[group.x.toInt()].key] ?? '?';
                                 final playerStat = playerStatsConDatos[group.x.toInt()].value;
                                 return BarTooltipItem(
