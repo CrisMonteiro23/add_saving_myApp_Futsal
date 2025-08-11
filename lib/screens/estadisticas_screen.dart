@@ -60,12 +60,14 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
             // Calculamos las estadísticas dentro del Consumer para que se actualicen con el filtro
             final Map<String, Map<String, int>> playerStats = _getPlayerStats(situaciones);
             final Map<String, Map<String, int>> situacionTypeStats = _getSituacionTypeStats(situaciones);
+            final List<Situacion> situacionesAFavor = situaciones.where((s) => s.esAFavor).toList();
+            final List<Situacion> situacionesEnContra = situaciones.where((s) => !s.esAFavor).toList();
 
             return TabBarView(
               children: [
                 _buildPlayerStatsTable(context, playerStats, appData.jugadoresDisponibles, situaciones),
-                _buildSituationTypeStatsTable(context, situacionTypeStats),
-                _buildChartsView(context, playerStats, situacionTypeStats, appData.jugadoresDisponibles, situaciones),
+                _buildSituationTypeTables(context, situacionesAFavor, situacionesEnContra),
+                _buildChartsView(context, playerStats, appData.jugadoresDisponibles, situacionesAFavor, situacionesEnContra),
               ],
             );
           },
@@ -95,15 +97,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     return stats;
   }
 
-  Map<String, Map<String, int>> _getSituacionTypeStats(List<Situacion> situaciones) {
-    final Map<String, Map<String, int>> stats = {};
+  Map<String, int> _getSituacionTypeStats(List<Situacion> situaciones) {
+    final Map<String, int> stats = {};
     for (var situacion in situaciones) {
-      stats.putIfAbsent(situacion.tipoLlegada, () => {'favor': 0, 'contra': 0});
-      if (situacion.esAFavor) {
-        stats[situacion.tipoLlegada]!['favor'] = stats[situacion.tipoLlegada]!['favor']! + 1;
-      } else {
-        stats[situacion.tipoLlegada]!['contra'] = stats[situacion.tipoLlegada]!['contra']! + 1;
-      }
+      stats.update(situacion.tipoLlegada, (value) => value + 1, ifAbsent: () => 1);
     }
     return stats;
   }
@@ -139,7 +136,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
     final int totalFavor = situaciones.where((s) => s.esAFavor).length;
     final int totalContra = situaciones.where((s) => !s.esAFavor).length;
-    final int totalGeneral = situaciones.length;
     final int totalBalance = totalFavor - totalContra;
 
     return SingleChildScrollView(
@@ -155,7 +151,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
             DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
             DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
             DataColumn(label: Text('Balance', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            // Se elimina la columna de Total
           ],
           rows: [
             ...statsConDatos.map((entry) {
@@ -170,7 +165,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                   DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
                   DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
                   DataCell(Text(balance.toString(), textAlign: TextAlign.center, style: TextStyle(color: balance >= 0 ? Colors.green : Colors.red, fontWeight: FontWeight.bold))),
-                  // Se elimina la celda de Total
                 ],
               );
             }).toList(),
@@ -181,7 +175,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
                 DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
                 DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
-                // Se elimina la celda de Total General
               ],
             ),
           ],
@@ -190,96 +183,97 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
-  Widget _buildSituationTypeStatsTable(BuildContext context, Map<String, Map<String, int>> stats) {
-    if (stats.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay datos de tipos de situación para mostrar estadísticas.',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
-
-    final List<MapEntry<String, Map<String, int>>> sortedStats = stats.entries.toList();
-    sortedStats.sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
-
-    final List<MapEntry<String, Map<String, int>>> statsConDatos = sortedStats.where((entry) {
-      final typeStat = entry.value;
-      return typeStat['favor']! > 0 || typeStat['contra']! > 0;
-    }).toList();
-
-    if (statsConDatos.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay situaciones registradas por tipo.',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
-
-    // Se calculan los totales generales para la fila de abajo
-    final int totalFavorGlobal = statsConDatos.fold(0, (sum, entry) => sum + (entry.value['favor'] ?? 0));
-    final int totalContraGlobal = statsConDatos.fold(0, (sum, entry) => sum + (entry.value['contra'] ?? 0));
-    final int totalSituacionesGlobal = totalFavorGlobal + totalContraGlobal;
+  Widget _buildSituationTypeTables(BuildContext context, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
+    // Calculamos las estadísticas por tipo de situación para cada categoría
+    final Map<String, int> statsAFavor = _getSituacionTypeStats(situacionesAFavor);
+    final Map<String, int> statsEnContra = _getSituacionTypeStats(situacionesEnContra);
+    
+    // Total de situaciones por categoría para el cálculo de porcentajes
+    final int totalAFavor = situacionesAFavor.length;
+    final int totalEnContra = situacionesEnContra.length;
 
     return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: DataTable(
-          columnSpacing: 16,
-          dataRowHeight: 50,
-          headingRowColor: MaterialStateProperty.all(Colors.blue.shade100),
-          columns: const [
-            DataColumn(label: Text('Tipo de Llegada', style: TextStyle(fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            DataColumn(label: Text('% A Favor', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            DataColumn(label: Text('En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            DataColumn(label: Text('% En Contra', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
-            // Se eliminan las columnas Total y % del Total
-          ],
-          rows: [
-            ...statsConDatos.map((entry) {
-              final tipo = entry.key;
-              final typeStat = entry.value;
-              final favor = typeStat['favor']!;
-              final contra = typeStat['contra']!;
-              final total = favor + contra;
-              final porcentajeFavor = total > 0 ? (favor / total) * 100 : 0;
-              final porcentajeContra = total > 0 ? (contra / total) * 100 : 0;
-              return DataRow(
-                cells: [
-                  DataCell(Text(tipo)),
-                  DataCell(Text(favor.toString(), textAlign: TextAlign.center)),
-                  DataCell(Text('${porcentajeFavor.toStringAsFixed(1)}%', textAlign: TextAlign.center)),
-                  DataCell(Text(contra.toString(), textAlign: TextAlign.center)),
-                  DataCell(Text('${porcentajeContra.toStringAsFixed(1)}%', textAlign: TextAlign.center)),
-                  // Se eliminan las celdas de Total y % del Total
-                ],
-              );
-            }).toList(),
-            DataRow(
-              color: MaterialStateProperty.all(Colors.blue.shade50),
-              cells: [
-                const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                DataCell(Text(totalFavorGlobal.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
-                DataCell(Text(totalSituacionesGlobal > 0 ? '${(totalFavorGlobal / totalSituacionesGlobal * 100).toStringAsFixed(1)}%' : '0%', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
-                DataCell(Text(totalContraGlobal.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
-                DataCell(Text(totalSituacionesGlobal > 0 ? '${(totalContraGlobal / totalSituacionesGlobal * 100).toStringAsFixed(1)}%' : '0%', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
-                // Se eliminan las celdas de Total y % del Total
+      child: Column(
+        children: [
+          _buildSingleSituationTable(context, 'Situaciones A Favor', statsAFavor, totalAFavor, Colors.green),
+          const SizedBox(height: 20),
+          _buildSingleSituationTable(context, 'Situaciones En Contra', statsEnContra, totalEnContra, Colors.red),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, Color color) {
+    if (stats.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(
+            'No hay datos para "$title".',
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    
+    final List<MapEntry<String, int>> sortedStats = stats.entries.toList();
+    sortedStats.sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: Text(
+              title,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              columnSpacing: 16,
+              dataRowHeight: 50,
+              headingRowColor: MaterialStateProperty.all(color.shade100),
+              columns: const [
+                DataColumn(label: Text('Tipo de Llegada', style: TextStyle(fontWeight: FontWeight.bold))),
+                DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+                DataColumn(label: Text('% del Total', style: TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.center)),
+              ],
+              rows: [
+                ...sortedStats.map((entry) {
+                  final porcentaje = total > 0 ? (entry.value / total) * 100 : 0.0;
+                  return DataRow(
+                    cells: [
+                      DataCell(Text(entry.key)),
+                      DataCell(Text(entry.value.toString(), textAlign: TextAlign.center)),
+                      DataCell(Text('${porcentaje.toStringAsFixed(1)}%', textAlign: TextAlign.center)),
+                    ],
+                  );
+                }).toList(),
+                DataRow(
+                  color: MaterialStateProperty.all(color.shade50),
+                  cells: [
+                    const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                    DataCell(Text(total.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: color))),
+                    const DataCell(Text('100.0%', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   // --- Widgets para Gráficos de Estadísticas ---
-  Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, Map<String, Map<String, int>> situacionTypeStats, List<Jugador> jugadores, List<Situacion> situaciones) {
-    if (playerStats.isEmpty || situacionTypeStats.isEmpty) {
+  Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, List<Jugador> jugadores, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
+    if (playerStats.isEmpty) {
       return const Center(
         child: Text(
           'No hay datos suficientes para generar gráficos.',
@@ -289,11 +283,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       );
     }
     
-    // Total de situaciones a favor y en contra
-    final int totalFavor = situaciones.where((s) => s.esAFavor).length;
-    final int totalContra = situaciones.where((s) => !s.esAFavor).length;
-    final int totalGeneral = totalFavor + totalContra;
-    
     final Map<String, String> idToNombre = {for (var j in jugadores) j.id: j.nombre};
     final List<MapEntry<String, Map<String, int>>> playerStatsConDatos = playerStats.entries.where((entry) {
       final playerStat = entry.value;
@@ -301,35 +290,107 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     }).toList();
     playerStatsConDatos.sort((a, b) => idToNombre[a.key]!.toLowerCase().compareTo(idToNombre[b.key]!.toLowerCase()));
 
-    // Pie chart sections para el nuevo gráfico de totales
-    List<PieChartSectionData> totalPieSections = [];
-    if (totalGeneral > 0) {
-      if (totalFavor > 0) {
-        totalPieSections.add(PieChartSectionData(
-          color: Colors.green.shade400,
-          value: totalFavor.toDouble(),
-          title: '${(totalFavor / totalGeneral * 100).toStringAsFixed(1)}%',
+    // Calculamos las estadísticas de tipo de situación para los gráficos
+    final Map<String, int> statsAFavor = _getSituacionTypeStats(situacionesAFavor);
+    final Map<String, int> statsEnContra = _getSituacionTypeStats(situacionesEnContra);
+    final int totalAFavor = situacionesAFavor.length;
+    final int totalEnContra = situacionesEnContra.length;
+    final List<Color> pieChartColors = Colors.primaries;
+    
+    // Funciones para generar las secciones de los gráficos circulares
+    List<PieChartSectionData> getPieSections(Map<String, int> stats, int total) {
+      if (total == 0) return [];
+      final List<MapEntry<String, int>> sortedStats = stats.entries.toList();
+      sortedStats.sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+
+      return sortedStats.map((entry) {
+        final index = sortedStats.indexOf(entry);
+        final color = pieChartColors[index % pieChartColors.length];
+        return PieChartSectionData(
+          color: color,
+          value: entry.value.toDouble(),
+          title: '${(entry.value / total * 100).toStringAsFixed(1)}%',
           radius: 50.0,
           titleStyle: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.bold,
             color: Color(0xffffffff),
           ),
-        ));
-      }
-      if (totalContra > 0) {
-        totalPieSections.add(PieChartSectionData(
-          color: Colors.red.shade400,
-          value: totalContra.toDouble(),
-          title: '${(totalContra / totalGeneral * 100).toStringAsFixed(1)}%',
-          radius: 50.0,
-          titleStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Color(0xffffffff),
+        );
+      }).toList();
+    }
+    
+    Widget _buildPieChartCard(String title, Map<String, int> stats, int total, Color color) {
+      if (total == 0) return const SizedBox.shrink();
+
+      final List<MapEntry<String, int>> sortedStats = stats.entries.toList();
+      sortedStats.sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+
+      return Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              Text(
+                title,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: PieChart(
+                        PieChartData(
+                          sections: getPieSections(stats, total),
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          borderData: FlBorderData(show: false),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: sortedStats.map((entry) {
+                        final index = sortedStats.indexOf(entry);
+                        final color = pieChartColors[index % pieChartColors.length];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 16,
+                                height: 16,
+                                color: color,
+                              ),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  entry.key,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ));
-      }
+        ),
+      );
     }
 
 
@@ -438,78 +499,14 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
               ),
             ),
           
-          if (totalGeneral > 0)
+          if (situacionesAFavor.isNotEmpty || situacionesEnContra.isNotEmpty)
             const SizedBox(height: 20),
 
-          if (totalGeneral > 0)
-            Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Distribución Total de Situaciones',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 1,
-                          child: AspectRatio(
-                            aspectRatio: 1,
-                            child: PieChart(
-                              PieChartData(
-                                sections: totalPieSections,
-                                sectionsSpace: 2,
-                                centerSpaceRadius: 40,
-                                borderData: FlBorderData(show: false),
-                                pieTouchData: PieTouchData(touchCallback: (FlTouchEvent event, pieTouchResponse) {
-                                  // Lógica para interactividad si es necesaria
-                                }),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 1,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                child: Row(
-                                  children: [
-                                    Container(width: 16, height: 16, color: Colors.green.shade400),
-                                    const SizedBox(width: 8),
-                                    const Flexible(child: Text('A Favor', style: TextStyle(fontSize: 12))),
-                                  ],
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                child: Row(
-                                  children: [
-                                    Container(width: 16, height: 16, color: Colors.red.shade400),
-                                    const SizedBox(width: 8),
-                                    const Flexible(child: Text('En Contra', style: TextStyle(fontSize: 12))),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          if (situacionesAFavor.isNotEmpty)
+            _buildPieChartCard('Distribución de Situaciones A Favor', statsAFavor, totalAFavor, Colors.green),
+          
+          if (situacionesEnContra.isNotEmpty)
+            _buildPieChartCard('Distribución de Situaciones En Contra', statsEnContra, totalEnContra, Colors.red),
         ],
       ),
     );
