@@ -80,6 +80,8 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
   }
 
   // --- Funciones para calcular estadísticas localmente ---
+
+  /// Calcula las estadísticas de situaciones a favor y en contra por cada jugador.
   Map<String, Map<String, int>> _getPlayerStats(List<Situacion> situaciones) {
     final Map<String, Map<String, int>> stats = {};
     for (var situacion in situaciones) {
@@ -95,7 +97,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     return stats;
   }
 
-  // Función para obtener las estadísticas por tipo de situación
+  /// Calcula el total de situaciones por tipo.
   Map<String, int> _getSituacionTypeStats(List<Situacion> situaciones) {
     final Map<String, int> stats = {};
     for (var situacion in situaciones) {
@@ -105,8 +107,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
   }
 
   // --- Widgets para Tablas de Estadísticas ---
+
+  /// Construye la tabla de estadísticas por jugador.
   Widget _buildPlayerStatsTable(BuildContext context, Map<String, Map<String, int>> stats, List<Jugador> jugadores, List<Situacion> situaciones) {
-    if (stats.isEmpty || jugadores.isEmpty) {
+    if (situaciones.isEmpty || jugadores.isEmpty) {
       return const Center(
         child: Text(
           'No hay datos de jugadores para mostrar estadísticas.',
@@ -122,16 +126,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       return playerStat['favor']! > 0 || playerStat['contra']! > 0;
     }).toList();
     statsConDatos.sort((a, b) => idToNombre[a.key]!.toLowerCase().compareTo(idToNombre[b.key]!.toLowerCase()));
-
-    if (statsConDatos.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay situaciones registradas para los jugadores.',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
 
     final int totalFavor = situaciones.where((s) => s.esAFavor).length;
     final int totalContra = situaciones.where((s) => !s.esAFavor).length;
@@ -182,6 +176,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
+  /// Construye las tablas de situaciones a favor y en contra.
   Widget _buildSituationTypeTables(BuildContext context, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
     // Calculamos las estadísticas por tipo de situación para cada categoría
     final Map<String, int> statsAFavor = _getSituacionTypeStats(situacionesAFavor);
@@ -189,7 +184,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
 
     // Total de situaciones por categoría para el cálculo de porcentajes
     final int totalAFavor = situacionesAFavor.length;
-    final int totalEn Contra = situacionesEnContra.length;
+    final int totalEnContra = situacionesEnContra.length;
 
     return SingleChildScrollView(
       child: Column(
@@ -202,6 +197,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
+  /// Construye una única tabla para un tipo de situación específico.
   Widget _buildSingleSituationTable(BuildContext context, String title, Map<String, int> stats, int total, MaterialColor color) {
     if (stats.isEmpty) {
       return Center(
@@ -270,19 +266,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
-
   // --- Widgets para Gráficos de Estadísticas ---
-  Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, List<Jugador> jugadores, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
-    if (playerStats.isEmpty) {
-      return const Center(
-        child: Text(
-          'No hay datos suficientes para generar gráficos.',
-          style: TextStyle(fontSize: 18, color: Colors.grey),
-          textAlign: TextAlign.center,
-        ),
-      );
-    }
 
+  /// Construye la vista de los gráficos.
+  Widget _buildChartsView(BuildContext context, Map<String, Map<String, int>> playerStats, List<Jugador> jugadores, List<Situacion> situacionesAFavor, List<Situacion> situacionesEnContra) {
     final Map<String, String> idToNombre = {for (var j in jugadores) j.id: j.nombre};
     final List<MapEntry<String, Map<String, int>>> playerStatsConDatos = playerStats.entries.where((entry) {
       final playerStat = entry.value;
@@ -297,7 +284,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     final int totalEnContra = situacionesEnContra.length;
     final List<Color> pieChartColors = Colors.primaries;
 
-    // Funciones para generar las secciones de los gráficos circulares
+    /// Función para generar las secciones de los gráficos circulares
     List<PieChartSectionData> getPieSections(Map<String, int> stats, int total) {
       if (total == 0) return [];
       final List<MapEntry<String, int>> sortedStats = stats.entries.toList();
@@ -393,7 +380,6 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       );
     }
 
-
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -428,8 +414,8 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                               x: index,
                               barRods: [
                                 BarChartRodData(
-                                  toY: favor,
-                                  color: Colors.green.shade400,
+                                  toY: favor + contra,
+                                  color: Colors.red.shade400,
                                   width: 15,
                                   borderRadius: const BorderRadius.only(
                                     topLeft: Radius.circular(5),
@@ -437,8 +423,8 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                                   ),
                                   backDrawRodData: BackgroundBarChartRodData(
                                     show: true,
-                                    toY: favor + contra,
-                                    color: Colors.red.shade400,
+                                    toY: favor,
+                                    color: Colors.green.shade400,
                                   ),
                                 ),
                               ],
@@ -481,11 +467,11 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                           barTouchData: BarTouchData(
                             touchTooltipData: BarTouchTooltipData(
                               getTooltipColor: (group) => Colors.blueGrey,
-                              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                              getTooltipItem: (group, groupIndex, rod) {
                                 final jugadorNombre = idToNombre[playerStatsConDatos[group.x.toInt()].key] ?? '?';
                                 final playerStat = playerStatsConDatos[group.x.toInt()].value;
                                 return BarTooltipItem(
-                                  '$jugadorNombre:\nFavor: ${playerStat['favor']}\nContra: ${playerStat['contra']}',
+                                  '$jugadorNombre\nTotal: ${rod.toY.toInt()}\nA Favor: ${playerStat['favor']}\nEn Contra: ${playerStat['contra']}',
                                   const TextStyle(color: Colors.white),
                                 );
                               },
@@ -498,13 +484,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
                 ),
               ),
             ),
-
-          if (situacionesAFavor.isNotEmpty || situacionesEnContra.isNotEmpty)
-            const SizedBox(height: 20),
-
+          const SizedBox(height: 20),
           if (situacionesAFavor.isNotEmpty)
             _buildPieChartCard('Distribución de Situaciones A Favor', statsAFavor, totalAFavor, Colors.green),
-
+          const SizedBox(height: 20), // Añadido un SizedBox entre los dos gráficos circulares
           if (situacionesEnContra.isNotEmpty)
             _buildPieChartCard('Distribución de Situaciones En Contra', statsEnContra, totalEnContra, Colors.red),
         ],
@@ -512,6 +495,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     );
   }
 
+  /// Exporta los datos de las situaciones a un archivo CSV y los copia al portapapeles.
   void _exportDataToCsv(BuildContext context, AppData appData) async {
     final List<Situacion> situaciones;
     if (_mostrarTodo) {
@@ -545,11 +529,13 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
     final String csv = const ListToCsvConverter().convert(rawData);
     await Clipboard.setData(ClipboardData(text: csv));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Datos crudos copiados al portapapeles. Pégalos en Excel para crear gráficos.'),
-        duration: Duration(seconds: 4),
-      ),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Datos crudos copiados al portapapeles. Pégalos en Excel para crear gráficos.'),
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
   }
 }
