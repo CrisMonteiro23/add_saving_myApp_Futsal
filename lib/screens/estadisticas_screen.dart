@@ -1,4 +1,4 @@
-// lib/screens/estadisticas_screen.dart// lib/screens/estadisticas_screen.dart
+// lib/screens/estadisticas_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:mi_app_futsal/data/app_data.dart';
@@ -57,13 +57,14 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
               situaciones = appData.partidoActual?.situaciones ?? [];
             }
 
-            // Calculamos las estadísticas dentro de este widget
+            // Calculamos las estadísticas dentro del Consumer para que se actualicen con el filtro
             final Map<String, Map<String, int>> playerStats = _getPlayerStats(situaciones);
             final Map<String, Map<String, int>> situacionTypeStats = _getSituacionTypeStats(situaciones);
 
             return TabBarView(
               children: [
-                _buildPlayerStatsTable(context, playerStats, appData.jugadoresDisponibles),
+                // Pasamos las situaciones filtradas a la tabla de jugadores
+                _buildPlayerStatsTable(context, playerStats, appData.jugadoresDisponibles, situaciones),
                 _buildSituationTypeStatsTable(context, situacionTypeStats),
                 _buildChartsView(context, playerStats, situacionTypeStats, appData.jugadoresDisponibles),
               ],
@@ -109,7 +110,7 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
   }
 
   // --- Widgets para Tablas de Estadísticas ---
-  Widget _buildPlayerStatsTable(BuildContext context, Map<String, Map<String, int>> stats, List<Jugador> jugadores) {
+  Widget _buildPlayerStatsTable(BuildContext context, Map<String, Map<String, int>> stats, List<Jugador> jugadores, List<Situacion> situaciones) {
     if (stats.isEmpty || jugadores.isEmpty) {
       return const Center(
         child: Text(
@@ -137,15 +138,14 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
       );
     }
 
-    int totalFavorJugadores = 0;
-    int totalContraJugadores = 0;
-    for (var entry in statsConDatos) {
-      final playerStat = entry.value;
-      totalFavorJugadores += playerStat['favor']!;
-      totalContraJugadores += playerStat['contra']!;
-    }
-    final int totalGeneralJugadores = totalFavorJugadores + totalContraJugadores;
-    final int totalBalanceJugadores = totalFavorJugadores - totalContraJugadores;
+    // --- CÁLCULO DE TOTALES CORRECTO PARA LA TABLA DE JUGADORES ---
+    // En lugar de sumar las filas de la tabla (que suman más por tener varios jugadores en una situación),
+    // se calculan los totales directamente de la lista de situaciones.
+    final int totalFavor = situaciones.where((s) => s.esAFavor).length;
+    final int totalContra = situaciones.where((s) => !s.esAFavor).length;
+    final int totalGeneral = situaciones.length;
+    final int totalBalance = totalFavor - totalContra;
+    // -------------------------------------------------------------
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -185,10 +185,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
               color: MaterialStateProperty.all(Colors.blue.shade50),
               cells: [
                 const DataCell(Text('TOTAL GENERAL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-                DataCell(Text(totalFavorJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
-                DataCell(Text(totalContraJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
-                DataCell(Text(totalBalanceJugadores.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalanceJugadores >= 0 ? Colors.green : Colors.red))),
-                DataCell(Text(totalGeneralJugadores.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueAccent))),
+                DataCell(Text(totalFavor.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green))),
+                DataCell(Text(totalContra.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red))),
+                DataCell(Text(totalBalance.toString(), textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: totalBalance >= 0 ? Colors.green : Colors.red))),
+                DataCell(Text(totalGeneral.toString(), textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blueAccent))),
               ],
             ),
           ],
