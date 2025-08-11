@@ -86,7 +86,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-
   // Modificación: Cambiar la llamada a _resetForm() por _resetSituationForm()
   void _addSituationAndReset() {
     if (_esAFavor == null || _selectedTipoLlegada == null || _selectedPlayers.length != 5) {
@@ -339,14 +338,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
 
                 // Contenido basado en el paso actual
-                // ✅ MODIFICACIÓN: Quitar el Expanded para evitar el scroll en la selección de jugadores
-                // Usar un SizedBox para controlar el tamaño si es necesario, pero el Wrap widget es mejor.
-                // En este caso, simplemente se elimina el Expanded.
                 _currentStep == AppStep.selectPlayers
                     ? _buildPlayerSelectionGrid(appData.jugadores)
                     : _currentStep == AppStep.selectType
                         ? _buildTypeSelectionButtons()
-                        : Expanded(child: _buildSituationTypeSelection()),
+                        // ✅ MODIFICACIÓN: Usar Wrap en lugar de ListView.builder para evitar el scroll
+                        : _buildSituationTypeSelectionWrap(),
 
                 const SizedBox(height: 20),
 
@@ -435,6 +432,43 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ✅ MODIFICACIÓN: Nuevo widget para el paso 3 usando Wrap en lugar de ListView
+  Widget _buildSituationTypeSelectionWrap() {
+    return Wrap(
+      spacing: 8.0,
+      runSpacing: 8.0,
+      alignment: WrapAlignment.center,
+      children: _tiposLlegada.map((tipo) {
+        final isSelected = _selectedTipoLlegada == tipo;
+        return ActionChip(
+          label: Text(tipo),
+          backgroundColor: isSelected ? Colors.blue.shade100 : Colors.grey.shade200,
+          labelStyle: TextStyle(
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.blue.shade800 : Colors.black,
+          ),
+          onPressed: () {
+            setState(() {
+              _selectedTipoLlegada = tipo;
+            });
+          },
+          avatar: isSelected ? const Icon(Icons.check_circle, color: Colors.blue, size: 18) : null,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(
+              color: isSelected ? Colors.blue : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ✅ El método _buildSituationTypeSelection original se puede eliminar o comentar
+  // ya que ahora se usa _buildSituationTypeSelectionWrap en el build principal.
+  /*
   Widget _buildSituationTypeSelection() {
     return ListView.builder(
       itemCount: _tiposLlegada.length,
@@ -466,6 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
   }
+  */
 
   Widget _buildActionButtons() {
     if (_currentStep == AppStep.selectPlayers) {
