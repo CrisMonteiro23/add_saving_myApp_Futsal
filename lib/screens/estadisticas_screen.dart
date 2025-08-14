@@ -18,6 +18,15 @@ class EstadisticasScreen extends StatefulWidget {
 }
 
 class _EstadisticasScreenState extends State<EstadisticasScreen> {
+  @override
+  void initState() {
+    super.initState();
+    final appData = Provider.of<AppData>(context, listen: false);
+    if (!appData.hasLoadedOnce) {
+      appData.loadFromStorage();
+    }
+  }
+
   // Estado para controlar si mostrar estadísticas generales o del partido actual
   bool _mostrarTodo = true;
 
@@ -50,6 +59,10 @@ class _EstadisticasScreenState extends State<EstadisticasScreen> {
         ),
         body: Consumer<AppData>(
           builder: (context, appData, child) {
+            if (appData.isLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
             // Se obtienen las situaciones en base al filtro seleccionado
             final List<Situacion> situaciones;
             if (_mostrarTodo) {
