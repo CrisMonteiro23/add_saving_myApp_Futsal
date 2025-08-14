@@ -10,6 +10,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppData extends ChangeNotifier {
   final Uuid _uuid = const Uuid();
 
+  // ✅ NUEVO: Estado de carga
+  bool _isLoading = true;
+  bool _hasLoadedOnce = false;
+
   // Lista de jugadores disponibles
   final List<Jugador> _jugadoresDisponibles = [
     Jugador(id: const Uuid().v4(), nombre: 'Victor'),
@@ -28,17 +32,21 @@ class AppData extends ChangeNotifier {
     Jugador(id: const Uuid().v4(), nombre: 'Nicolas'),
   ];
 
-  // ✅ NUEVO: Lista de todos los partidos
+  // Lista de todos los partidos
   final List<Partido> _partidos = [];
   
-  // ✅ NUEVO: ID del partido actualmente seleccionado
+  // ID del partido actualmente seleccionado
   String? _partidoActualId;
 
   // === GETTERS ===
+  
+  // ✅ NUEVO: Getters para estado de carga
+  bool get isLoading => _isLoading;
+  bool get hasLoadedOnce => _hasLoadedOnce;
+  
   List<Jugador> get jugadoresDisponibles => List.unmodifiable(_jugadoresDisponibles);
   List<Jugador> get jugadores => jugadoresDisponibles;
   
-  // ✅ NUEVO: Getters para partidos
   List<Partido> get partidos => List.unmodifiable(_partidos);
   
   Partido? get partidoActual {
@@ -52,7 +60,6 @@ class AppData extends ChangeNotifier {
 
   String get partidoActualNombre => partidoActual?.equipoLocalNombre ?? 'Sin partido';
 
-  // ✅ MODIFICADO: Ahora obtiene situaciones del partido actual
   List<Situacion> get situacionesRegistradas {
     final partido = partidoActual;
     if (partido == null) return [];
@@ -61,7 +68,6 @@ class AppData extends ChangeNotifier {
 
   // === MÉTODOS DE PARTIDOS ===
   
-  // ✅ NUEVO: Crear un nuevo partido
   String crearNuevoPartido(String nombreEquipoLocal, String nombreEquipoVisitante) {
     final nuevoPartido = Partido(
       id: _uuid.v4(),
@@ -86,7 +92,6 @@ class AppData extends ChangeNotifier {
     return nuevoPartido.id;
   }
 
-  // ✅ NUEVO: Seleccionar un partido existente
   void seleccionarPartido(String partidoId) {
     if (_partidos.any((p) => p.id == partidoId)) {
       _partidoActualId = partidoId;
@@ -95,11 +100,9 @@ class AppData extends ChangeNotifier {
     }
   }
 
-  // ✅ NUEVO: Eliminar un partido
   void eliminarPartido(String partidoId) {
     _partidos.removeWhere((p) => p.id == partidoId);
     
-    // Si eliminamos el partido actual, seleccionar otro o ninguno
     if (_partidoActualId == partidoId) {
       _partidoActualId = _partidos.isNotEmpty ? _partidos.last.id : null;
     }
@@ -108,7 +111,7 @@ class AppData extends ChangeNotifier {
     _saveToStorage();
   }
 
-  // === MÉTODOS EXISTENTES MODIFICADOS ===
+  // === MÉTODOS EXISTENTES ===
   
   void addJugador(String nombre) {
     if (nombre.trim().isEmpty) return;
@@ -117,7 +120,6 @@ class AppData extends ChangeNotifier {
     final nuevoJugador = Jugador(id: _uuid.v4(), nombre: nombre.trim());
     _jugadoresDisponibles.add(nuevoJugador);
     
-    // ✅ NUEVO: Agregar jugador a todos los partidos existentes
     for (var partido in _partidos) {
       if (!partido.jugadores.any((j) => j.nombre.toLowerCase() == nombre.toLowerCase())) {
         partido.jugadores.add(nuevoJugador);
@@ -131,7 +133,6 @@ class AppData extends ChangeNotifier {
   void addSituacion(bool esAFavor, String tipoLlegada, List<Jugador> jugadoresEnCancha) {
     final partido = partidoActual;
     if (partido == null) {
-      // Si no hay partido actual, crear uno automáticamente
       crearNuevoPartido('Equipo Local', 'Equipo Visitante');
       return addSituacion(esAFavor, tipoLlegada, jugadoresEnCancha);
     }
@@ -159,8 +160,11 @@ class AppData extends ChangeNotifier {
     _saveToStorage();
   }
 
-  // === ESTADÍSTICAS (MODIFICADAS) ===
+  // === ESTADÍSTICAS ===
   Map<String, Map<String, int>> getStatsPorJugador() {
+    // ✅ NUEVO: Protección contra acceso durante carga
+    if (_isLoading || !_hasLoadedOnce) return {};
+    
     final partido = partidoActual;
     if (partido == null) return {};
 
@@ -186,6 +190,9 @@ class AppData extends ChangeNotifier {
   Map<String, Map<String, int>> getPlayerStats() => getStatsPorJugador();
 
   Map<String, Map<String, int>> getStatsPorTipo() {
+    // ✅ NUEVO: Protección contra acceso durante carga
+    if (_isLoading || !_hasLoadedOnce) return {};
+    
     final partido = partidoActual;
     if (partido == null) return {};
 
@@ -205,6 +212,9 @@ class AppData extends ChangeNotifier {
   Map<String, Map<String, int>> getSituacionTypeStats() => getStatsPorTipo();
 
   Map<String, int> getTotalesReales() {
+    // ✅ NUEVO: Protección contra acceso durante carga
+    if (_isLoading || !_hasLoadedOnce) return {'favor': 0, 'contra': 0, 'total': 0};
+    
     final partido = partidoActual;
     if (partido == null) return {'favor': 0, 'contra': 0, 'total': 0};
 
@@ -226,30 +236,42 @@ class AppData extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       
-      // Guardar todos los partidos
       final listaPartidos = _partidos.map((p) => jsonEncode(p.toJson())).toList();
       await prefs.setStringList(_kKeyPartidos, listaPartidos);
       
-      // Guardar ID del partido actual
       if (_partidoActualId != null) {
         await prefs.setString(_kKeyPartidoActual, _partidoActualId!);
       } else {
         await prefs.remove(_kKeyPartidoActual);
       }
-    } catch (_) {
-      // Ignorar errores de guardado
+    } catch (e) {
+      debugPrint('Error guardando datos: $e');
     }
   }
 
+  // ✅ MODIFICADO: Mejorar la carga de datos
   Future<void> loadFromStorage() async {
     try {
+      // ✅ NUEVO: Marcar como cargando
+      _isLoading = true;
+      notifyListeners();
+      
       final prefs = await SharedPreferences.getInstance();
       
       // Cargar partidos
       final listaPartidos = prefs.getStringList(_kKeyPartidos) ?? [];
-      _partidos
-        ..clear()
-        ..addAll(listaPartidos.map((s) => Partido.fromJson(jsonDecode(s))).toList());
+      _partidos.clear();
+      
+      for (final partidoJson in listaPartidos) {
+        try {
+          final partido = Partido.fromJson(jsonDecode(partidoJson));
+          _partidos.add(partido);
+        } catch (e) {
+          debugPrint('Error cargando partido: $e');
+          // Continuar con el siguiente partido si hay error
+          continue;
+        }
+      }
       
       // Cargar ID del partido actual
       _partidoActualId = prefs.getString(_kKeyPartidoActual);
@@ -259,16 +281,31 @@ class AppData extends ChangeNotifier {
         _partidoActualId = _partidos.isNotEmpty ? _partidos.first.id : null;
       }
       
+      // ✅ NUEVO: Marcar como terminada la carga
+      _isLoading = false;
+      _hasLoadedOnce = true;
       notifyListeners();
-    } catch (_) {
-      // Ignorar errores de carga
+      
+    } catch (e) {
+      debugPrint('Error cargando datos: $e');
+      // ✅ NUEVO: Incluso si hay error, marcar como terminada la carga
+      _isLoading = false;
+      _hasLoadedOnce = true;
+      notifyListeners();
     }
   }
 
-  // ✅ NUEVO: Método para limpiar todos los datos
+  // ✅ NUEVO: Método para forzar recarga
+  Future<void> reloadData() async {
+    _hasLoadedOnce = false;
+    await loadFromStorage();
+  }
+
   Future<void> limpiarTodosLosDatos() async {
     _partidos.clear();
     _partidoActualId = null;
+    _isLoading = false;
+    _hasLoadedOnce = true;
     notifyListeners();
     
     final prefs = await SharedPreferences.getInstance();
